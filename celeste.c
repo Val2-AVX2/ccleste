@@ -301,7 +301,8 @@ static bool has_key = false;
 static bool pause_player = false;
 static bool flash_bg = false;
 static int music_timer = 0;
-
+//Wall timer before slide
+int timer_wall = 0;
 //these are originally implicit globals defined in title_screen()
 static bool new_bg = false;
 static int frames, seconds;
@@ -322,7 +323,7 @@ enum {
 //with this X macro table thing we can define the properties that each object type has, in the original lua code these properties
 //are inferred from the `types` table
 #define OBJ_PROP_LIST() \
-	/* TYPE        TILE   HAS INIT  HAS UPDATE  HAS DRAW    IF_NOT_FRUIT */\
+	/* TYPE        TILE   HAS INIT  HAS UPDATE  HAS DRAW    IF_NOT_FRUIT ?*/\
 	X(PLAYER,       -1,     Y,        Y,          Y,            false)\
 	X(PLAYER_SPAWN,  1,     Y,        Y,          Y,            false)\
 	X(SPRING,       18,     Y,        Y,          N,            false)\
@@ -373,7 +374,7 @@ static void title_screen() {
 		got_fruit[i] = false;
 	frames=0;
 	deaths=0;
-	max_djump=1;
+	max_djump=2;
 	start_game=false;
 	start_game_flash=0;
 	P8music(40,0,7);
@@ -450,8 +451,9 @@ typedef struct {
 //OBJECT strucutre
 typedef struct {
 	bool active;
+	VEC dash_target;
 	short id; //unique identifier for each object, incremented per object
-
+	int wall_look_timer;
 	//inherited
 	OBJTYPE type;
 	bool collideable, solids;
@@ -466,7 +468,6 @@ typedef struct {
 	bool p_jump, p_dash;
 	int grace, jbuffer, djump, dash_time;
 	short dash_effect_time; //can underflow in normal gameplay (after 18 minutes)
-	VEC dash_target;
 	VEC dash_accel;
 	float spr_off;
 	bool was_on_ground;
@@ -661,6 +662,7 @@ static void OBJ_move_y(OBJ* obj, float amount) {
 static void PLAYER_init(OBJ* this) {
 	this->p_jump=false;
 	this->p_dash=false;
+	
 	this->grace=0;
 	this->jbuffer=0;
 	this->djump=max_djump;
@@ -775,10 +777,17 @@ static void PLAYER_update(OBJ* this) {
 
 		// wall slide
 		if (input!=0 && OBJ_is_solid(this, input,0) && !OBJ_is_ice(this, input,0)) {
-			maxfall=0.4;
+			maxfall=0;
+			
+			timer_wall++;
 			if (P8rnd(10)<2) {
 				init_object(OBJ_SMOKE,this->x+input*6,this->y);
 			}
+			if (timer_wall >= 150) {
+    			maxfall=1;
+				timer_wall=0;
+			}
+
 		}
 
 		if (!on_ground) {
@@ -911,7 +920,18 @@ void create_hair(OBJ* obj) {
 }
 
 static void set_hair_color(int djump) {
-	P8pal(8,(djump==1 ? 8 : (djump==2 ?(7+P8flr(((int)(((float)frames)/3.0))%2)*4) : 12)));
+    if (djump == 1) {
+        P8pal(8, 8);
+    }
+    else if (djump == 2) {
+        P8pal(8, 10);
+    }
+	else if (djump == 3) {
+		P8pal(8, 11);
+	}
+    else {
+        P8pal(8, 12);
+    }
 }
 
 static void draw_hair(OBJ* obj, int facing) {
@@ -1165,6 +1185,7 @@ static void FRUIT_update(OBJ* this) {
 		got_fruit[level_index()] = true;
 		init_object(OBJ_LIFEUP,this->x,this->y);
 		destroy_object(this);
+		max_djump+=1;//add one jump for recompense
 		return; //LEMON: added return to not modify dead object
 	}
 	this->off+=1;
@@ -1213,6 +1234,7 @@ static void FLY_FRUIT_update(OBJ* this) {
 		got_fruit[level_index()] = true;
 		init_object(OBJ_LIFEUP,this->x,this->y);
 		do_destroy_object = true;
+		max_djump+=1;
 	}
 	if (do_destroy_object) destroy_object(this);
 }

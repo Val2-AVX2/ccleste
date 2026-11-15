@@ -78,3 +78,14 @@ Sound wave files are taken from [https://github.com/JeffRuLz/Celeste-Classic-GBA
 music ogg files were obtained by converting the .wav dumps from pico 8, which I did using audacity & ffmpeg.
 
 All credit for the original game goes to the original developers (Maddy Thorson & Noel Berry).
+
+# Credits
+
+This project is a fork of ccleste, originally created by lemon32767.
+
+My modifications
+Added custom hair colors depending on the number of available dashes.
+Modified player mechanics.
+Additional improvements and modifications coming soon.
+
+All original credits go to the original author.
