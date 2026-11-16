@@ -374,7 +374,7 @@ static void title_screen() {
 		got_fruit[i] = false;
 	frames=0;
 	deaths=0;
-	max_djump=2;
+	max_djump=1;
 	start_game=false;
 	start_game_flash=0;
 	P8music(40,0,7);
@@ -920,7 +920,10 @@ void create_hair(OBJ* obj) {
 }
 
 static void set_hair_color(int djump) {
-    if (djump == 1) {
+	if (djump == 0) {
+		P8pal(8, 12);
+	}
+    else if (djump == 1) {
         P8pal(8, 8);
     }
     else if (djump == 2) {
@@ -929,8 +932,23 @@ static void set_hair_color(int djump) {
 	else if (djump == 3) {
 		P8pal(8, 11);
 	}
+	else if (djump == 4) {
+		P8pal(8,14);
+	}
+	else if (djump == 5) {
+		P8pal(8, 1);
+	}
+	else if (djump == 6) {
+		P8pal(8, 2);
+	}
+	else if (djump == 7) {
+		P8pal(8, 4);
+	}
+	else if (djump == 8) {
+		P8pal(8, 3);
+	}
     else {
-        P8pal(8, 12);
+        P8pal(8, 13);
     }
 }
 
