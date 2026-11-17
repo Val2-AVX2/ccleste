@@ -1487,8 +1487,8 @@ static void ORB_draw(OBJ* this) {
 		freeze=10;
 		shake=10;
 		destroy_self = true; //LEMON: to avoid reading off dead object
-		max_djump=2;
-		hit->djump=2;
+		max_djump+=1;
+		hit->djump+=1;
 	}
    
 	P8spr(102,this->x,this->y,  1,1,false,false);

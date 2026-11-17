@@ -2,6 +2,7 @@
 #include <SDL_mixer.h>
 #if SDL_MAJOR_VERSION >= 2
 #include "sdl20compat.inc.c"
+#include <stdint.h>
 #endif
 #include <math.h>
 #include <stdarg.h>
