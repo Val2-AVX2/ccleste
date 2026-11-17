@@ -947,6 +947,15 @@ static void set_hair_color(int djump) {
 	else if (djump == 8) {
 		P8pal(8, 3);
 	}
+	else if (djump == 9) {
+		P8pal(8, 9);
+	}
+	else if (djump == 10) {
+		P8pal(8, 7);
+	}
+	else if (djump == 11) {
+		P8pal(8, 6);
+	}
     else {
         P8pal(8, 13);
     }

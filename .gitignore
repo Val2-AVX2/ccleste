@@ -9,6 +9,7 @@ build/
 *.elf
 *.smdh
 win-build/
+win-msvc/
 em-build/
 ccleste-win.zip
 ccleste-input-cfg.txt

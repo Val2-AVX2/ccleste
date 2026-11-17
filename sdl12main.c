@@ -239,6 +239,81 @@ static Mix_Music* game_state_music = NULL;
 static void mainLoop(void);
 static FILE* TAS = NULL;
 
+#if defined(_WIN32) || defined(_3DS)
+#define GAME_STATE_PATH "ccleste-state.bin"
+
+struct game_state_file_header {
+	char magic[8];
+	unsigned int version;
+	unsigned int state_size;
+	int music_index;
+};
+
+static int GameStateMusicIndex(Mix_Music* music) {
+	if (!music) return -1;
+	for (int i = 0; i < sizeof mus / sizeof *mus; i++) {
+		if (mus[i] == music) return i;
+	}
+	return -1;
+}
+
+static int SaveGameStateToDisk(void) {
+	size_t state_size = Celeste_P8_get_state_size();
+	void* state = SDL_malloc(state_size);
+	if (!state) return 0;
+	Celeste_P8_save_state(state);
+
+	FILE* file = fopen(GAME_STATE_PATH, "wb");
+	if (!file) {
+		SDL_free(state);
+		return 0;
+	}
+
+	struct game_state_file_header header;
+	memset(&header, 0, sizeof header);
+	memcpy(header.magic, "CCLSTATE", sizeof header.magic);
+	header.version = 1;
+	header.state_size = (unsigned int)state_size;
+	header.music_index = GameStateMusicIndex(current_music);
+	int ok = fwrite(&header, sizeof header, 1, file) == 1
+		&& fwrite(state, state_size, 1, file) == 1;
+	if (fclose(file) != 0) ok = 0;
+	SDL_free(state);
+	return ok;
+}
+
+static int LoadGameStateFromDisk(void) {
+	FILE* file = fopen(GAME_STATE_PATH, "rb");
+	if (!file) return errno == ENOENT ? -1 : 0;
+
+	struct game_state_file_header header;
+	size_t state_size = Celeste_P8_get_state_size();
+	int ok = fread(&header, sizeof header, 1, file) == 1
+		&& memcmp(header.magic, "CCLSTATE", sizeof header.magic) == 0
+		&& header.version == 1
+		&& header.state_size == state_size
+		&& header.music_index >= -1
+		&& header.music_index < (int)(sizeof mus / sizeof *mus);
+	void* state = ok ? SDL_malloc(state_size) : NULL;
+	if (ok && !state) ok = 0;
+	if (ok && fread(state, state_size, 1, file) != 1) ok = 0;
+	if (ok && (fgetc(file) != EOF || ferror(file))) ok = 0;
+	if (fclose(file) != 0) ok = 0;
+
+	if (ok) {
+		Celeste_P8_load_state(state);
+		Mix_Music* loaded_music = header.music_index < 0 ? NULL : mus[header.music_index];
+		if (current_music != loaded_music) {
+			Mix_HaltMusic();
+			current_music = loaded_music;
+			if (current_music) Mix_PlayMusic(current_music, -1);
+		}
+	}
+	if (state) SDL_free(state);
+	return ok;
+}
+#endif
+
 #ifdef _3DS
 // hack: newer SDL versions remove SDL_N3DSKeyBind, but I'm too lazy to change the
 // code to properly use SDL_Joystick inputs on 3DS so work around it ...
@@ -500,15 +575,38 @@ static void mainLoop(void) {
 				break;
 			} else if (ev.key.keysym.sym == SDLK_s && kbstate[SDLK_LSHIFT]) { //save state
 				save_state:
+#if defined(_WIN32) || defined(_3DS)
+				if (SaveGameStateToDisk()) {
+					OSDset("save state");
+				} else {
+					OSDset("save state failed");
+					ErrLog("couldn't save state file '%s'\n", GAME_STATE_PATH);
+				}
+#else
 				game_state = game_state ? game_state : SDL_malloc(Celeste_P8_get_state_size());
 				if (game_state) {
 					OSDset("save state");
 					Celeste_P8_save_state(game_state);
 					game_state_music = current_music;
 				}
+#endif
 				break;
 			} else if (ev.key.keysym.sym == SDLK_d && kbstate[SDLK_LSHIFT]) { //load state
 				load_state:
+#if defined(_WIN32) || defined(_3DS)
+				{
+					int load_result = LoadGameStateFromDisk();
+					if (load_result > 0) {
+						OSDset("load state");
+						if (paused) paused = 0, Mix_Resume(-1), Mix_ResumeMusic();
+					} else if (load_result < 0) {
+						OSDset("no saved state");
+					} else {
+						OSDset("load state failed");
+						ErrLog("couldn't load state file '%s'\n", GAME_STATE_PATH);
+					}
+				}
+#else
 				if (game_state) {
 					OSDset("load state");
 					if (paused) paused = 0, Mix_Resume(-1), Mix_ResumeMusic();
@@ -519,6 +617,7 @@ static void mainLoop(void) {
 						if (game_state_music) Mix_PlayMusic(game_state_music, -1);
 					}
 				}
+#endif
 				break;
 			} else if ( //toggle screenshake (e / L+R)
 #ifdef _3DS

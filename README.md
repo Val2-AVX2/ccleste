@@ -29,6 +29,14 @@ libctru
 devkitARM
 ```
 
+On Windows and 3DS, saved states are stored in `ccleste-state.bin` in the game's working directory. Use Shift+S to save and Shift+D to load; on 3DS, use Y+R and Y+L. These saves persist after closing the game.
+
+To compile the standard Windows build with MSVC, open a Visual Studio Developer Command Prompt and run:
+```
+Mode-MSVC
+```
+`Mode-MSVC.bat` builds the standard Windows executable with CL, using SDL2 from `C:\SDL2` and SDL2_mixer from `C:\SDL2_mixer` by default. Override these locations with the `SDL2_ROOT` and `SDL2_MIXER_ROOT` environment variables. The executable and required runtime files are placed in `win-msvc`; set `MSVC_ARCH` to `x86` when using an x86 Developer Command Prompt (the default is `x64`).
+
 # Controls
 
 |PC                |3DS                |Action              |
